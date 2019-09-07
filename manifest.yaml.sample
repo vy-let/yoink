@@ -1,0 +1,50 @@
+# This file is to be used on the remote side (or the "handling" side), to declare which
+# directories need to be backed up and how to prepare them.
+
+
+# The Prepare step is run before any backups are taken. The actions here are defined in
+# ruby files in the `lib/handle` folder. You can add your own handlers by adding your own
+# ruby files there (possibly using `dc_pg_backup` as a template), and then adding a
+# `require` statement in the top-level `handle.rb` file.
+prepare:
+  - do: dc_pg_backup
+
+    # Optionally declare the present working directory to run this task using the `in` key
+    in: /var/lib/lib/opt/spool/www-data
+
+    # Pass in arguments to the ruby task. These keys are relevant to `dc_pg_backup`
+    with:
+      # Docker-compose container who owns the backup
+      container: db
+      # User inside the container who owns the database
+      user: synapse_user
+      # Name of the database to back up
+      database: synapse
+      # Location on the host to save the database dump
+      output: /var/lib/lib/opt/spool/database.dump
+
+
+# This is the list of directories to back up:
+backups:
+  - location: /etc/nixos
+
+    # Alias is the name under which the calling party (i.e. the one you run `yoink.rb` on)
+    # will save the backup from the above directory. It can be anything you like, but
+    # aliases should be unique per host.
+    alias: etc-nixos
+
+  - location: /var/lib/lib/opt/spool
+    alias: web-data
+
+    # Here we can exclude some files from the backup. Each entry should follow the syntax
+    # for exclude rules in rsync.
+    exclude:
+      - /var/lib/lib/opt/spool/www-data/live-database-files
+
+
+# This is a list of cleanup tasks. These are defined and run the same way as prepare
+# tasks. They happen regardless of whether the backup tasks succeeded.
+cleanup:
+  - do: rm_if_present
+    with:
+      file: /var/lib/lib/opt/spool/database.dump

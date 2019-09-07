@@ -1,0 +1,27 @@
+# This file describes how to access each remote host you want to take backups from. It is
+# meant to be used on the backup-taking side (i.e. the side you run "yoink.rb"
+# from). Before you begin, copy this file out to `config.yaml` in the same directory, and
+# fill it out to your needs.
+
+
+# This is the list of hosts to connect to.
+hosts:
+
+  # First we're going to connect to example.com and ask it to prepare its backups. The
+  # user we've set up on the remote side for accepting the ssh connection and initiating
+  # the backups is called `remote-backup-user`. It will send back a set of folders
+  # containing backup data; these all go into the `into` folder on this local machine.
+  - host: example.com
+    user: remote-backup-user
+    into: /local/folder/to/put/all/backups/from/remote/host/example-dot-com
+
+  # Same idea here:
+  - host: subdomain.example.org
+    user: remote-backup-user
+    into: /local/folder/to/put/all/backups/from/remote/host/subdomain-example-org
+
+
+# While the initial setup is handled by the current user, the rsync processes that take
+# the actual backups are run as root to ensure all permissions are copied as-is. This
+# means we need to tell it where your local authorized ssh key is stored:
+ssh_privkey: /home/local-user/.ssh/id_rsa
