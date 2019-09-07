@@ -15,13 +15,14 @@
 $/ = "\n"
 
 require 'yaml'
+require_relative 'lib/common/deverbosify'
 require_relative 'lib/handle/dc_pg_backup'
 require_relative 'lib/handle/rm_if_present'
 require_relative 'lib/handle/check_do_with'
 
 
 
-begin  # backtrace de-verbosificator
+Common.deverbosify do
 
 
 
@@ -87,13 +88,4 @@ begin  # backtrace de-verbosificator
 
 
 
-rescue => e
-  # By default, don't print a backtrace.
-
-  if ARGV.include? "--verbose"
-    $stderr.puts e.full_message
-  else
-    $stderr.puts e.inspect
-    $stderr.puts "To see full backtrace, re-run with the '--verbose' flag."
-  end
-end
+end # deverbosify

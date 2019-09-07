@@ -16,44 +16,50 @@ $/ = "\n"
 
 require 'yaml'
 require 'open3'
+require_relative 'lib/common/deverbosify'
 require_relative 'lib/gather/yaml_load_from_io'
 require_relative 'lib/gather/do_backup'
 
 
 
-config = YAML.load_file("#{__dir__}/config.yaml")
+Common.deverbosify do
 
-privkey = config['ssh_privkey']
+  config = YAML.load_file("#{__dir__}/config.yaml")
 
-raise "no hosts in the config" unless config['hosts']&.any?
-config['hosts'].each_with_index do | hostspec, idex |
+  privkey = config['ssh_privkey']
 
-  host = hostspec['host']
-  user = hostspec['user']
-  dest = hostspec['into']
+  raise "no hosts in the config" unless config['hosts']&.any?
+  config['hosts'].each_with_index do | hostspec, idex |
 
-  # This is important for rsync:
-  dest += '/' unless dest.end_with?('/')
+    host = hostspec['host']
+    user = hostspec['user']
+    dest = hostspec['into']
+
+    # This is important for rsync:
+    dest += '/' unless dest.end_with?('/')
 
 
 
-  # Open the controlling connection
-  finished_ok = false
-  privkey_args = privkey ? ['-i', privkey] : []
-  Open3.popen2("ssh", *privkey_args, "#{user}@#{host}", ".yoink/handle.rb") do | standin, standout, thr |
+    # Open the controlling connection
+    finished_ok = false
+    privkey_args = privkey ? ['-i', privkey] : []
+    Open3.popen2("ssh", *privkey_args, "#{user}@#{host}", ".yoink/handle.rb") do | standin, standout, thr |
 
-    # Wait for yaml
-    remote_manifest = YAML.load_from_io standout
+      # Wait for yaml
+      remote_manifest = YAML.load_from_io standout
 
-    # Rsync each location in sequence
-    remote_manifest.each do | spec |
-      DoBackup.with spec, into: dest, host: host, user: user, privkey: privkey
+      # Rsync each location in sequence
+      remote_manifest.each do | spec |
+        DoBackup.with spec, into: dest, host: host, user: user, privkey: privkey
+      end
+
+      # Write status and wait for server to close:
+      standin.puts "ok"
+      finished_ok = thr.value.success?
+
     end
-
-    # Write status and wait for server to close:
-    standin.puts "ok"
-    finished_ok = thr.value.success?
 
   end
 
-end
+
+end # deverbosify
