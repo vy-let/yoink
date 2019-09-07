@@ -65,12 +65,19 @@ class DoBackup
     # Call rsync
     #
 
+    # Make sure that the destination folder exists
     FileUtils.mkdir_p dest
 
-    $stderr.puts "Going to run:"
+    $stderr.puts "\n\nGoing to run:"
     $stderr.puts args.join(' ')
-    $stderr.puts Open3.capture2e( *args )
+    outs, errs, stats = Open3.capture3( *args )
 
+    $stdout.puts outs
+
+    unless stats.success?
+      $stderr.puts errs
+      raise "rsync exited with a nonzero status"
+    end
 
 
   end
