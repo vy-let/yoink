@@ -1,0 +1,136 @@
+
+* Yoink
+
+Yoink is a simple tool for automatically backing up remote servers to a local snapshot. Conceptually, it works as a frontend to rsync, with programmatic event hooks on the server side to prepare data (such as taking database dumps). It uses declarative config files rather than relying on command-line arguments.
+
+The manifest describing how to back up the various parts of a server /lives on the server itself,/ which makes it easy to change up the services you have running without altering a central backup task on a different machine.
+
+*Yoink is very much still a work-in-progress! It's very likely to need tweaking to suit your needs.*
+
+** Target Audience
+
+This tool is currently targeted at people who manage at least one Linux server. The setup process and documentation are currently targeted at slightly more-experienced admins, but they will likely not always remain so. I love to help a beginner out, so if you need some assistance, please feel free to file an issue on Github.
+
+** How It Works, by Example
+
+Yoink runs on a local machine, and calls out to your servers to pull backups from them, and writes them to a local attached disk (really, anywhere on your filesystem). To do this, you give it a list of servers that have a copy of Yoink installed. The local config, in YAML, looks like this:
+
+#+BEGIN_SRC
+hosts:
+  - host: tooele.example.com
+    user: backups
+    into: /Volumes/NASty/server-backups/tooele
+
+  - host: thistle.example.com
+    user: backups
+    into: /Volumes/NASty/server-backups/thistle
+
+ssh_privkey: /Users/myself/.ssh/id_rsa
+#+END_SRC
+
+Each remote server has its own "manifest" that declares which directories on it need to be sync'd, as well as pre- and post-hook tasks to run. For instance, say I have this config on my "thistle" server:
+
+#+BEGIN_SRC
+prepare:
+  - do: dc_pg_backup
+    in: /home/webnets/containers/synapse
+    with:
+      container: db
+      user: synapse_user
+      database: synapse
+      output: /home/webnets/synapse-backup.dump
+
+backups:
+  - location: /etc/nixos
+    alias: system-files
+
+  - location: /home/webnets
+    alias: home
+    exclude: /containers/synapse/data/postgres
+
+cleanup:
+  - do: rm_if_present
+    with:
+      file: /home/webnets/synapse-backup.dump
+#+END_SRC
+
+When the local client calls out to this machine, before any files transfer the host will take a postgresql database dump (in this case, from a database inside a docker-compose container homed at ~\~/containers/synapse~) out to a file on the same host.
+
+Then, the local client will call out and pull the contents of the webnets home folder (which contains the snapshot), but skip over the live running volume of the database container. It will also grab the entire ~/etc/nixos~ system config folder. These wind up in
+
+- ~/Volumes/NASty/server-backups/thistle/home~ and
+- ~/Volumes/NASty/server-backups/thistle/system-files~,
+
+on your local disk.
+
+Once the actual backups are done, the server will clean up its own database snapshot to keep disk usage down.
+
+** Dependencies
+
+The following are required on each client /and/ server:
+
+- Ruby :: Tested to work on Ruby 2.5 and 2.6. No gems are required.
+- Rsync :: Should work with any recent version.
+
+Tested to work on Linux and macOS. There's no reason it shouldn't work on Windows also, but I haven't checked yet. /Your servers must support ~sudo~./
+
+** Setup
+
+*** Download the software and set up user accounts
+
+On client and server, make sure ruby and rsync are installed. As mentioned, you need ruby 2.5 or greater; given that caveat, any default system installation for these tools ought to do.
+
+On your client---the place backups will go---clone this git repo in any place you prefer. If you're on a unix-like system, you may want to make sure that ~yoink.rb~ is executable, though git ought to do this for you. If you don't, just remember when you go to run it that you'll have to do ~ruby yoink.rb~.
+
+On your server (or servers), make a backups user to accept unattended ssh connections. From here on, I'll be calling this user "backups". There are two crucial steps here:
+
+1. Set up your ssh keys so that you can log into your server as the backups user without a password.
+2. Set the backups user so that they have passwordless sudo access. This allows rsync to back up system files and preserve all permissions. This shouldn't necessarily be required, and in the future I'll be adding an option to take a non-archive backup where rsync doesn't attempt to invoke sudo.
+
+/(Or, if you're like me, you can take the lazy route and use any ol' user account that already has similar privileges.)/
+
+On your server (or servers), clone this repo into ~\~/.yoink~ inside the backups home folder, and make sure that ~handle.rb~ is executable. Currently, the location is important, because the client-side script will look for your executable there.
+
+*** Configure
+
+On the client, copy the ~config.yaml.sample~ to ~config.yaml~, and modify it to point to your server, and to your SSH key. Because the task preserves file permissions, it will need to run as a superuser, and that means you need to explicitly tell SSH-as-root where to find your key.
+
+Test your as-root connection to the server by running ~sudo ssh -i /path/to/your/id_rsa backups@example.com~. It should ask you to do the usual ECDSA fingerprint verification---this is point of this step, because we want that trust configured and saved, so that ssh doesn't try to ask us this later when the task runs automatically.
+
+Now, on the server, copy the ~manifest.yaml.sample~ to ~manifest.yaml~, and modify it to point to the locations you need.
+
+** Run
+
+To test-run the backup, on the client just do ~sudo path/to/yoink.rb~ or ~sudo ruby path/to/yoink.rb~, depending on your needs. It currently prints out a lot of rsync diagnostic and statistic information, but that will become configurable in the future.
+
+Yoink provides no built-in way of running periodically. Instead, it's designed to play nicely with system task runners like systemd, launchd, cron, etc. I'll post some sample configs here sometime.
+
+** Hooks
+
+Yoink can run pre- and post-hooks, defined as ruby methods in the codebase. Currently, there's only one pre-hook, which can serve as an example of both how to create an arbitrary ruby hook, as well as how to call out to an external program. I wrote the task, which pulls a database snapshot from postgresql running inside a docker-compose container, simply because that's what I needed first.
+
+*** Writing Your Own
+
+To write your own hook, start by modeling it after ~lib/handle/dc_pg_backup.rb~. Let's imagine you're calling it ~reticulate_splines~. Make a new ruby file in the same folder, and give it the structure
+
+#+BEGIN_SRC ruby
+class Plugins
+  def self.reticulate_splines args
+    # ...
+  end
+end
+#+END_SRC
+
+Up in ~handle.rb~ at the top of the project, add a ~require_relative~ pointing to your file. Now that we have the method, let's make it actually run. Open up your ~manifest.yaml~, and put an entry in the ~prepare~ section:
+
+#+BEGIN_SRC
+prepare:
+  - do: reticulate_splines
+    with:
+      arbitrary_keys: arbitrary values
+      extra_cromulence: true
+#+END_SRC
+
+The entire ~with~ map you put in the manifest file is passed into your ruby method.
+
+If you come up with a useful hook, please feel free to contribute it back to the main project!
