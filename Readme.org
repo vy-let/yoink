@@ -15,7 +15,7 @@ This tool is currently targeted at people who manage at least one Linux server. 
 
 Yoink runs on a local machine, and calls out to your servers to pull backups from them, and writes them to a local attached disk (really, anywhere on your filesystem). To do this, you give it a list of servers that have a copy of Yoink installed. The local config, in YAML, looks like this:
 
-#+BEGIN_SRC
+#+BEGIN_SRC yaml
 hosts:
   - host: tooele.example.com
     user: backups
@@ -30,7 +30,7 @@ ssh_privkey: /Users/myself/.ssh/id_rsa
 
 Each remote server has its own "manifest" that declares which directories on it need to be sync'd, as well as pre- and post-hook tasks to run. For instance, say I have this config on my "thistle" server:
 
-#+BEGIN_SRC
+#+BEGIN_SRC yaml
 prepare:
   - do: dc_pg_backup
     in: /home/webnets/containers/synapse
@@ -123,7 +123,7 @@ end
 
 Up in ~handle.rb~ at the top of the project, add a ~require_relative~ pointing to your file. Now that we have the method, let's make it actually run. Open up your ~manifest.yaml~, and put an entry in the ~prepare~ section:
 
-#+BEGIN_SRC
+#+BEGIN_SRC yaml
 prepare:
   - do: reticulate_splines
     with:
