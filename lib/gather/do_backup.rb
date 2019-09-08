@@ -46,7 +46,7 @@ class DoBackup
     # Build args to rsync
     #
 
-    args = %w( rsync -azxx --stats --partial --rsync-path=sudo\ rsync )
+    args = %w( rsync -azxx --stats --partial --delete --rsync-path=sudo\ rsync )
 
     if privkey
       args.concat [ '-e', "ssh -i #{privkey}" ]
