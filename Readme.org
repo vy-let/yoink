@@ -3,7 +3,7 @@
 
 Yoink is a simple tool for automatically backing up remote servers to a local snapshot. Conceptually, it works as a frontend to rsync, with programmatic event hooks on the server side to prepare data (such as taking database dumps). It uses declarative config files rather than relying on command-line arguments.
 
-The manifest describing how to back up the various parts of a server /lives on the server itself,/ which makes it easy to change up the services you have running without altering a central backup task on a different machine.
+The manifest describing how to back up the various parts of a server /lives on the server itself/, which makes it easy to change up the services you have running without altering a central backup task on a different machine.
 
 *Yoink is very much still a work-in-progress! It's very likely to need tweaking to suit your needs.*
 
@@ -54,7 +54,7 @@ cleanup:
       file: /home/webnets/synapse-backup.dump
 #+END_SRC
 
-When the local client calls out to this machine, before any files transfer the host will take a postgresql database dump (in this case, from a database inside a docker-compose container homed at ~\~/containers/synapse~) out to a file on the same host.
+When the local client calls out to this machine, before any files transfer the host will take a postgresql database dump (in this case, from a database inside a docker-compose container homed at ~~/containers/synapse~) out to a file on the same host.
 
 Then, the local client will call out and pull the contents of the webnets home folder (which contains the snapshot), but skip over the live running volume of the database container. It will also grab the entire ~/etc/nixos~ system config folder. These wind up in
 
@@ -89,7 +89,7 @@ On your server (or servers), make a backups user to accept unattended ssh connec
 
 /(Or, if you're like me, you can take the lazy route and use any ol' user account that already has similar privileges.)/
 
-On your server (or servers), clone this repo into ~\~/.yoink~ inside the backups home folder, and make sure that ~handle.rb~ is executable. Currently, the location is important, because the client-side script will look for your executable there.
+On your server (or servers), clone this repo into ~~/.yoink~ inside the backups home folder, and make sure that ~handle.rb~ is executable. Currently, the location is important, because the client-side script will look for your executable there.
 
 *** Configure
 
