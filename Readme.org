@@ -46,7 +46,9 @@ backups:
 
   - location: /home/webnets
     alias: home
-    exclude: /containers/synapse/data/postgres
+    exclude:
+      # Note: this is relative to the sync, not the filesystem root:
+      - /containers/synapse/data/postgres
 
 cleanup:
   - do: rm_if_present
