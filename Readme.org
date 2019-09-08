@@ -54,7 +54,7 @@ cleanup:
       file: /home/webnets/synapse-backup.dump
 #+END_SRC
 
-When the local client calls out to this machine, before any files transfer the host will take a postgresql database dump (in this case, from a database inside a docker-compose container homed at ~~/containers/synapse~) out to a file on the same host.
+When the local client calls out to this machine, before any files transfer the host will take a postgresql database dump (in this case, from a database inside a docker-compose container homed at =~/containers/synapse=) out to a file on the same host.
 
 Then, the local client will call out and pull the contents of the webnets home folder (which contains the snapshot), but skip over the live running volume of the database container. It will also grab the entire ~/etc/nixos~ system config folder. These wind up in
 
@@ -72,7 +72,7 @@ The following are required on each client /and/ server:
 - Ruby :: Tested to work on Ruby 2.5 and 2.6. No gems are required.
 - Rsync :: Should work with any recent version.
 
-Tested to work on Linux and macOS. There's no reason it shouldn't work on Windows also, but I haven't checked yet. /Your servers must support ~sudo~./
+Tested to work on Linux and macOS. There's no reason it shouldn't work on Windows also, but I haven't checked yet. /Your servers must support sudo./
 
 ** Setup
 
@@ -89,7 +89,7 @@ On your server (or servers), make a backups user to accept unattended ssh connec
 
 /(Or, if you're like me, you can take the lazy route and use any ol' user account that already has similar privileges.)/
 
-On your server (or servers), clone this repo into ~~/.yoink~ inside the backups home folder, and make sure that ~handle.rb~ is executable. Currently, the location is important, because the client-side script will look for your executable there.
+On your server (or servers), clone this repo into =~/.yoink= inside the backups home folder, and make sure that ~handle.rb~ is executable. Currently, the location is important, because the client-side script will look for your executable there.
 
 *** Configure
 
